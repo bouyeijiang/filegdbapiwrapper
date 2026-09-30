@@ -1,4 +1,4 @@
-# EsriGdbAPIWrapperCore
+# FileGdbAPIWrapper
 
 对 Esri FileGDB API 原生库（Linux：`libFileGDBAPI.so`；Windows：`FileGDBAPI.dll`）
 的 .NET 封装，供第三方 C# / VB.NET / F# 程序直接调用。已实现并验证的接口覆盖官方
@@ -31,7 +31,7 @@ C++ 对象），跨语言边界无法直接 P/Invoke。桥接层把它转换成�
 ## 目录结构
 
 ```
-EsriGdbAPIWrapperCore/
+FileGdbAPIWrapper/
 ├── include/                      Esri FileGDB API 头文件（官方）
 ├── lib/                          Esri FileGDB API 运行库（官方）
 │   ├── libFileGDBAPI.so          Linux 运行库
@@ -70,7 +70,7 @@ EsriGdbAPIWrapperCore/
 └── EsriGdbAPIWrapperCore.slnx
 ```
 
-## 原生 C ABI（`native/EsriGdbNative.h`）
+## 原生 C ABI（`native/FileGdbAPINative.h`）
 
 | 函数 | 说明 |
 |---|---|
@@ -120,10 +120,10 @@ EsriGdbAPIWrapperCore/
 依赖：g++、make、.NET SDK（示例按 .NET 10 编写，可自行改 `TargetFramework`）。
 
 ```bash
-dotnet build EsriGdbAPIWrapperCore.slnx
+dotnet build FileGdbAPIWrapper.slnx
 ```
 
-构建时 `build/EsriGdbNative.targets` 会自动：
+构建时 `build/FileGdbAPINative.targets` 会自动：
 
 1. 执行 `make -C native` 编译 `libesrigdbnative.so`（`-Wl,-rpath,$ORIGIN` +
    `--disable-new-dtags`，即 DT_RPATH——只有 DT_RPATH 才会传递到间接依赖，
@@ -151,10 +151,10 @@ Windows 上必须用 **MSVC**：`FileGDBAPI.dll` 是 MSVC 编译的 C++ 二进�
 需要安装 Visual Studio 2022（或 Build Tools，含 C++ 工作负载）和 CMake，然后照常：
 
 ```powershell
-dotnet build EsriGdbAPIWrapperCore.slnx
+dotnet build FileGdbAPIWrapper.slnx
 ```
 
-`build/EsriGdbNative.targets` 在 Windows 上改为：
+`build/FileGdbAPINative.targets` 在 Windows 上改为：
 
 1. `cmake -S native -B native/build-win -DCMAKE_BUILD_TYPE=Release` +
    `cmake --build native/build-win --config Release`
@@ -259,10 +259,10 @@ gdb.ExecuteSql("UPDATE CitiesNoGeo SET POP1990 = 65678 WHERE STATE_CITY = '06599
 
 ```bash
 # 只读演示：SQL + 目录 + 表结构 + 搜索 + 域 + 建/压/删库（临时目录）
-dotnet run --project samples/EsriGdbWrapper.Sample -- /path/to/xxx.gdb
+dotnet run --project samples/FileGdbAPIWrapper.Sample -- /path/to/xxx.gdb
 
 # 追加插入/更新/删除/加删字段演示（请对副本操作）
-dotnet run --project samples/EsriGdbWrapper.Sample -- /path/to/xxx.gdb edit
+dotnet run --project samples/FileGdbAPIWrapper.Sample -- /path/to/xxx.gdb edit
 ```
 
 ### 3. 目录浏览与表元数据
@@ -401,14 +401,14 @@ Error (-2147220655): Executing SQL 'SELECT * FROM NoSuchTable' failed:
 1. 引用类库：
 
    ```xml
-   <ProjectReference Include="path/to/EsriGdbAPIWrapperCore/src/EsriGdbWrapper/EsriGdbWrapper.csproj" />
+   <ProjectReference Include="path/to/FileGdbAPIWrapper/src/FileGdbAPIWrapper/FileGdbAPIWrapper.csproj" />
    ```
 
 2. 导入目标文件，保证三个 `.so` 落到你自己的输出目录（类库构建时只拷贝到它自己的
    bin，且首次全新构建时无法传递）：
 
    ```xml
-   <Import Project="path/to/EsriGdbAPIWrapperCore/build/EsriGdbNative.targets" />
+   <Import Project="path/to/FileGdbAPIWrapper/build/FileGdbAPINative.targets" />
    ```
 
    已经构建过一次 `native/` 后，`.so` 也会通过常规内容项自动传递到引用方输出目录。
