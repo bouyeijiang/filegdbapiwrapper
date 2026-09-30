@@ -1,0 +1,165 @@
+# Variables used in this file:
+# CFG       - The build mode; Release or Debug.
+#             Default value if unspecified - Release.
+# ARCH      - The target bitset for the architecture, 32 or 64.
+#             Default value if unspecified - Default for your machine as 
+#             reported by 'uname -m'.
+#
+# Target option examples:
+# Linux 32-bit on 32-bit Linux - make
+# Linux 32-bit on 64-bit Linux - make ARCH=32
+# Linux 64-bit on 64-bit Linux - make
+# Mac   64-bit on 64-bit Mac   - make
+#
+# Supported build configurations:
+# Linux 32-bit, 64-bit
+# Mac   64-bit
+#
+# Set CXX=g++ or CXX=clang++ based on your FileGDB API platform package.
+
+
+ifndef CFG
+  CFG=Release
+endif
+
+CXXDEF=-DUNICODE -D_UNICODE -DUNIX -D_REENTRANT -DFILEGDB_API \
+      -D__USE_FILE_OFFSET64 -DUNIX_FILEGDB_API -D_FILE_OFFSET_BITS=64\
+      -D_LARGEFILE64_SOURCE
+
+CXXFLAGS=-fPIC
+
+ifndef OS
+  OS := $(shell uname)
+endif
+
+# choose default architecture if unspecified
+ifndef ARCH
+  ARCH=32
+  machineArch := $(shell uname -m)
+  ifeq "$(machineArch)" "x86_64"
+    ARCH=64
+  endif
+endif
+
+ifdef API_BUILD
+  CXXFLAGS+=-fvisibility=hidden -fpermissive
+
+  ifndef RedHat5
+    RedHat5 := $(shell grep -s -c 'release 5' /etc/redhat-release)
+  endif
+
+  ifeq "$(RedHat5)" "1"
+    CXXFLAGS+=-Wno-attributes
+  endif
+endif
+
+ifeq "$(CFG)" "Release"
+  CXXFLAGS+=-O3
+endif
+
+ifeq "$(CFG)" "Debug"
+  CXXFLAGS+=-g
+endif
+
+ifeq "$(ARCH)" "32"
+  CXXFLAGS+=-m32
+  LDFLAGS=-m32
+  3PLIBDIR=.
+endif
+ifeq "$(ARCH)" "64"
+  CXXFLAGS+=-m64
+  LDFLAGS=-m64
+  ifeq "$(OS)" "Darwin"
+    ifeq "$(CXX)" "g++-8"
+      LD_FLAGS+=-arch x86_64 -L${GCC_HOME}/lib
+      3PLIBDIR=mac/gcc8/x64
+    else
+      LDFLAGS+=-arch x86_64
+      3PLIBDIR=mac/x64
+    endif
+    CXXFLAGS+=-arch x86_64 -D__MACOSX__ $(SDKPATH)
+  else
+    3PLIBDIR=gcc8/x64
+  endif
+endif
+
+ifndef CXX
+CXX=g++
+endif
+
+ifeq "$(OS)" "Darwin"
+  os_ver_minor := $(shell sw_vers -productVersion | cut -f2 -d.)
+  ifeq ($(shell test $(os_ver_minor) -gt 8; echo $$?), 0)
+    ifeq "$(CXX)" "g++"
+      CXXFLAGS+=-stdlib=libstdc++
+      LDFLAGS+=-stdlib=libstdc++
+    endif
+    ifeq "$(CXX)" "g++-8"
+      CXXFLAGS+=-std=c++11 -Wno-narrowing
+      LDFLAGS+=-static-libstdc++ -liconv -lpthread 
+    endif
+  endif
+endif
+
+DONT_USE_BOOST := 0
+
+ifeq "$(CXX)" "clang++"
+  DONT_USE_BOOST := 1
+
+  ifeq "$(OS)" "Linux"
+    CFLAGS+=-DLINUX_CLANG
+    CXXFLAGS+=-DLINUX_CLANG -std=c++11 -stdlib=libstdc++ -Wno-narrowing
+    LDFLAGS+=-v -stdlib=libstdc++ -lpthread -lrt
+
+    ifeq "$(ARCH)" "64"
+      3PLIBDIR=clang/x64
+    else
+      3PLIBDIR=clang
+    endif
+  else
+    CXXFLAGS+=-std=c++11 -stdlib=libc++
+    LDFLAGS+=-stdlib=libc++
+  endif
+else
+  CXXFLAGS+=-std=c++11
+endif
+
+ifeq "$(CXX)" "g++-8"
+  DONT_USE_BOOST := 1
+endif
+
+CXXOTHER=-I.
+
+SLIBEXT=so
+ifeq "$(OS)" "Darwin"
+  SLIBEXT=dylib
+endif
+
+AR=ar
+ARFLAGS=-rcs
+
+ifdef API_BUILD
+  ifeq "$(CXX)" "g++"
+    GCC_IS_GREATER_THAN_49 := $(shell expr `gcc -dumpversion | sed 's/\.//g'` \>= 490)
+    GCC_IS_GREATER_THAN_80 := $(shell expr `gcc -dumpversion | sed 's/\.//g'` \>= 800)
+
+    ifeq "$(GCC_IS_GREATER_THAN_49)" "1"
+      CXXFLAGS+=-v -std=c++11
+      ifeq "$(ARCH)" "64"
+        LD_FLAGS+=-L${GCC_HOME}/lib64 
+        ifeq "$(GCC_IS_GREATER_THAN_80)" "1"
+          3PLIBDIR=gcc8/x64
+        else
+          3PLIBDIR=gcc5/x64
+        endif
+      else
+        LD_FLAGS+=-L${GCC_HOME}/lib
+        3PLIBDIR=gcc5
+      endif
+    endif
+  endif
+  ifeq "$(GCC_IS_GREATER_THAN_49)" "1"
+    DONT_USE_BOOST := 1
+  endif
+endif
+

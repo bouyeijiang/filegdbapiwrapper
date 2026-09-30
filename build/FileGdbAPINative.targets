@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  EsriGdbNative.targets
+
+  Builds the native C ABI bridge and stages it, together with the Esri FileGDB
+  runtime, into the output folder of every project that imports this file.
+
+    Linux / macOS : make -C native   -> native/build/libesrigdbnative.so
+                    stages lib/libFileGDBAPI.so + lib/libfgdbunixrtl.so
+    Windows       : cmake -S native -B native/build-win (MSVC)
+                    -> native/build-win/bin/esrigdbnative.dll
+                    stages lib/FileGDBAPI.dll (+ friends).
+                    If cmake / Visual Studio are not available the build falls
+                    back to a prebuilt lib/esrigdbnative.dll and only warns.
+
+  Import it from any consumer project:
+
+      <Import Project="$(MSBuildThisFileDirectory)build/EsriGdbNative.targets" />
+
+  Properties:
+      EsriGdbSkipNativeBuild = true   Skip compiling; only copy the artifacts.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <EsriGdbRoot Condition="'$(EsriGdbRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</EsriGdbRoot>
+    <EsriGdbNativeSourceDir>$(EsriGdbRoot)/native</EsriGdbNativeSourceDir>
+    <EsriGdbRuntimeLibDir>$(EsriGdbRoot)/lib</EsriGdbRuntimeLibDir>
+    <EsriGdbSkipNativeBuild Condition="'$(EsriGdbSkipNativeBuild)' == ''">false</EsriGdbSkipNativeBuild>
+
+    <EsriGdbIsWindows Condition="'$(OS)' == 'Windows_NT'">true</EsriGdbIsWindows>
+    <EsriGdbIsWindows Condition="'$(EsriGdbIsWindows)' == ''">false</EsriGdbIsWindows>
+
+    <!-- make writes native/build, cmake on Windows writes native/build-win/bin -->
+    <EsriGdbNativeBuildDir Condition="'$(EsriGdbIsWindows)' == 'true'">$(EsriGdbNativeSourceDir)/build-win</EsriGdbNativeBuildDir>
+    <EsriGdbNativeBuildDir Condition="'$(EsriGdbNativeBuildDir)' == ''">$(EsriGdbNativeSourceDir)/build</EsriGdbNativeBuildDir>
+    <EsriGdbNativeBuiltDll>$(EsriGdbNativeBuildDir)/bin/esrigdbnative.dll</EsriGdbNativeBuiltDll>
+    <EsriGdbPrebuiltDll>$(EsriGdbRuntimeLibDir)/esrigdbnative.dll</EsriGdbPrebuiltDll>
+  </PropertyGroup>
+
+  <!-- 1. compile the bridge (idempotent, skipped when EsriGdbSkipNativeBuild=true) -->
+  <Target Name="BuildEsriGdbNative" BeforeTargets="Build" Condition="'$(EsriGdbSkipNativeBuild)' != 'true'">
+
+    <!-- Linux / macOS -->
+    <MakeDir Directories="$(EsriGdbNativeBuildDir)" Condition="'$(EsriGdbIsWindows)' != 'true'" />
+    <Exec Command="make -s -C &quot;$(EsriGdbNativeSourceDir)&quot;"
+          Condition="'$(EsriGdbIsWindows)' != 'true'" />
+
+    <!-- Windows: MSVC through CMake. Configure + build failures are not fatal
+         here (no cmake, no Visual Studio, no FileGDBAPI.lib, ...): step 2 falls
+         back to a prebuilt lib/esrigdbnative.dll when there is one. -->
+    <Exec Command="cmake -S &quot;$(EsriGdbNativeSourceDir)&quot; -B &quot;$(EsriGdbNativeBuildDir)&quot; -DCMAKE_BUILD_TYPE=Release"
+          Condition="'$(EsriGdbIsWindows)' == 'true'"
+          ContinueOnError="WarnAndContinue" />
+    <Exec Command="cmake --build &quot;$(EsriGdbNativeBuildDir)&quot; --config Release"
+          Condition="'$(EsriGdbIsWindows)' == 'true' and Exists('$(EsriGdbNativeBuildDir)/CMakeCache.txt')"
+          ContinueOnError="WarnAndContinue" />
+  </Target>
+
+  <!-- 2. stage the bridge + the Esri runtime libraries next to the assembly -->
+  <Target Name="CopyEsriGdbNativeArtifacts" AfterTargets="BuildEsriGdbNative">
+    <ItemGroup>
+      <!-- the bridge itself: make output (Unix), cmake output or the Windows
+           prebuilt fallback -->
+      <_EsriGdbBridgeArtifacts Include="$(EsriGdbNativeBuildDir)/*.so"
+                               Condition="'$(EsriGdbIsWindows)' != 'true'" />
+      <_EsriGdbBridgeArtifacts Include="$(EsriGdbNativeBuiltDll)"
+                               Condition="'$(EsriGdbIsWindows)' == 'true' and Exists('$(EsriGdbNativeBuiltDll)')" />
+      <_EsriGdbBridgeArtifacts Include="$(EsriGdbPrebuiltDll)"
+                               Condition="'$(EsriGdbIsWindows)' == 'true' and !Exists('$(EsriGdbNativeBuiltDll)') and Exists('$(EsriGdbPrebuiltDll)')" />
+      <!-- Esri's own runtime; the .dll half is Windows only, and the prebuilt
+           bridge is excluded there so that it can never collide with a freshly
+           built one of the same name -->
+      <_EsriGdbRuntimeLibs Include="$(EsriGdbRuntimeLibDir)/*.so"
+                           Condition="'$(EsriGdbIsWindows)' != 'true'" />
+      <_EsriGdbRuntimeLibs Include="$(EsriGdbRuntimeLibDir)/*.dll"
+                           Exclude="$(EsriGdbPrebuiltDll)"
+                           Condition="'$(EsriGdbIsWindows)' == 'true'" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Condition="'$(EsriGdbIsWindows)' == 'true' and !Exists('$(EsriGdbNativeBuiltDll)') and Exists('$(EsriGdbPrebuiltDll)')"
+             Text="EsriGdb: using the prebuilt $(EsriGdbPrebuiltDll) (the cmake build produced nothing)." />
+
+    <Copy SourceFiles="@(_EsriGdbBridgeArtifacts);@(_EsriGdbRuntimeLibs)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_EsriGdbBridgeArtifacts)' != '' or '@(_EsriGdbRuntimeLibs)' != ''" />
+
+    <Warning Condition="'@(_EsriGdbBridgeArtifacts)' == ''"
+             Text="EsriGdb: no bridge library found - expected '$(EsriGdbNativeBuildDir)' (make), '$(EsriGdbNativeBuiltDll)' (cmake) or '$(EsriGdbPrebuiltDll)'. The managed calls will fail at runtime." />
+  </Target>
+
+  <!-- 3. let the artifacts flow into the output of projects that reference this
+         one (works once the bridge has been built at least once).
+         Consumer projects that need a guaranteed copy should import this file. -->
+  <Target Name="CollectEsriGdbNativeArtifacts" BeforeTargets="GetCopyToOutputDirectoryItems">
+    <ItemGroup>
+      <_EsriGdbArtifacts Include="$(EsriGdbNativeBuildDir)/*.so;$(EsriGdbRuntimeLibDir)/*.so"
+                         Condition="'$(EsriGdbIsWindows)' != 'true'" />
+      <_EsriGdbArtifacts Include="$(EsriGdbNativeBuiltDll)"
+                         Condition="Exists('$(EsriGdbNativeBuiltDll)')" />
+      <_EsriGdbArtifacts Include="$(EsriGdbRuntimeLibDir)/*.dll"
+                         Exclude="$(EsriGdbPrebuiltDll)"
+                         Condition="'$(EsriGdbIsWindows)' == 'true'" />
+      <_EsriGdbArtifacts Include="$(EsriGdbPrebuiltDll)"
+                         Condition="'$(EsriGdbIsWindows)' == 'true' and !Exists('$(EsriGdbNativeBuiltDll)') and Exists('$(EsriGdbPrebuiltDll)')" />
+      <ContentWithTargetPath Include="@(_EsriGdbArtifacts)">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <TargetPath>%(Filename)%(Extension)</TargetPath>
+      </ContentWithTargetPath>
+    </ItemGroup>
+  </Target>
+
+</Project>

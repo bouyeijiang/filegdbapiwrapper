@@ -1,0 +1,7 @@
+bin/
+obj/
+native/build/
+native/build-cmake/
+native/build-win/
+*.user
+.vs/

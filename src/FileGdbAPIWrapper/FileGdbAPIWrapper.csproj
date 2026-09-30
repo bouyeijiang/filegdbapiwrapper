@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>EsriGdb</RootNamespace>
+    <AssemblyName>FileGdbAPIWrapper</AssemblyName>
+    <Version>1.0.0</Version>
+    <Description>Managed (.NET) wrapper over the Esri FileGDB API native library (libFileGDBAPI.so).</Description>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)../../build/FileGdbAPINative.targets" />
+
+</Project>
