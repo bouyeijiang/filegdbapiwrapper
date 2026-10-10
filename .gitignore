@@ -5,3 +5,4 @@ native/build-cmake/
 native/build-win/
 *.user
 .vs/
+/src/FileGdbAPIWrapper/Properties/PublishProfiles/FolderProfile.pubxml
