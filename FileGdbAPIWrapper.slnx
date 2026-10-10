@@ -1,8 +1,23 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="MinSizeRel" />
+    <BuildType Name="Release" />
+    <BuildType Name="RelWithDebInfo" />
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
   <Folder Name="/samples/">
-    <Project Path="samples/FileGdbAPIWrapper.Sample/FileGdbAPIWrapper.Sample.csproj" />
+    <Project Path="samples/FileGdbAPIWrapper.Sample/FileGdbAPIWrapper.Sample.csproj">
+      <BuildType Solution="MinSizeRel|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/FileGdbAPIWrapper/FileGdbAPIWrapper.csproj" />
+    <Project Path="native/build-win/esrigdbnative.vcxproj" Id="a78dd968-3bf3-3206-a709-7c1f43c08abb" />
+    <Project Path="src/FileGdbAPIWrapper/FileGdbAPIWrapper.csproj">
+      <BuildType Solution="MinSizeRel|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
   </Folder>
 </Solution>

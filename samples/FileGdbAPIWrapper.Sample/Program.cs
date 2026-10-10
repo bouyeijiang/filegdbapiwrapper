@@ -10,7 +10,7 @@ using EsriGdb;
 
 string gdbPath = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0])
     ? args[0]
-    : "/home/bouyei/Projects/FileGDB_API-RHEL8-64gcc8/samples/data/ExecuteSQL.gdb";
+    : "data/ExecuteSQL.gdb";
 
 string? sqlArgument = null;
 bool editDemo = false;
