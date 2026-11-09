@@ -20,4 +20,14 @@
       <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
     </Project>
   </Folder>
+  <Folder Name="/src/lib/">
+    <File Path="lib/FileGDBAPI.dll" />
+    <File Path="lib/FileGDBAPI.lib" />
+    <File Path="lib/FileGDBAPID.dll" />
+    <File Path="lib/FileGDBAPID.lib" />
+    <File Path="lib/libfgdbunixrtl.a" />
+    <File Path="lib/libfgdbunixrtl.so" />
+    <File Path="lib/libFileGDBAPI.so" />
+    <File Path="lib/make.include" />
+  </Folder>
 </Solution>
