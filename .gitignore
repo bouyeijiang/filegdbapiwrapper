@@ -10,3 +10,4 @@ native/build-win/
 /native/esrigdbnative.dir/Debug
 /native/CMakeFiles
 /native/lib
+/native/esrigdbnative.dir/Release
