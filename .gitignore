@@ -6,3 +6,6 @@ native/build-win/
 *.user
 .vs/
 /src/FileGdbAPIWrapper/Properties/PublishProfiles/FolderProfile.pubxml
+/native/CMakeFiles/4.4.5/VCTargetsPath/x64/Debug
+/native/esrigdbnative.dir/Debug
+/native/CMakeFiles
