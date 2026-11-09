@@ -14,7 +14,7 @@
     </Project>
   </Folder>
   <Folder Name="/src/">
-    <Project Path="native/build-win/esrigdbnative.vcxproj" Id="a78dd968-3bf3-3206-a709-7c1f43c08abb" />
+    <Project Path="native/esrigdbnative.vcxproj" Id="98b7bcb1-39b9-39d3-a383-d6afcc6a756f" />
     <Project Path="src/FileGdbAPIWrapper/FileGdbAPIWrapper.csproj">
       <BuildType Solution="MinSizeRel|*" Project="Release" />
       <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
